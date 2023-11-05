@@ -56,7 +56,6 @@ func startHttpListener(addr string, tlsCfg *tls.Config) (listener *conn.Listener
 
 // Handles a new http connection from the public internet
 func httpHandler(c conn.Conn, proto string) {
-	fmt.Println("http -> httpHandler 1")
 	defer c.Close()
 	defer func() {
 		// recover from failures
@@ -67,7 +66,6 @@ func httpHandler(c conn.Conn, proto string) {
 
 	// Make sure we detect dead connections while we decide how to multiplex
 	c.SetDeadline(time.Now().Add(connReadTimeout))
-	fmt.Println("http -> httpHandler 1.1")
 	// multiplex by extracting the Host header, the vhost library
 	vhostConn, err := vhost.HTTP(c)
 	if err != nil {
@@ -76,7 +74,6 @@ func httpHandler(c conn.Conn, proto string) {
 		return
 	}
 
-	fmt.Println("http -> httpHandler 2")
 	// read out the Host header and auth from the request
 	host := strings.ToLower(vhostConn.Host())
 	auth := vhostConn.Request.Header.Get("Authorization")
@@ -86,7 +83,7 @@ func httpHandler(c conn.Conn, proto string) {
 
 	// We need to read from the vhost conn now since it mucked around reading the stream
 	c = conn.Wrap(vhostConn, "pub")
-	fmt.Println("http -> httpHandler 3")
+
 	// multiplex to find the right backend host
 	c.Debug("Found hostname %s in request", host)
 	tunnel := tunnelRegistry.Get(fmt.Sprintf("%s://%s", proto, host))
@@ -95,7 +92,7 @@ func httpHandler(c conn.Conn, proto string) {
 		c.Write([]byte(fmt.Sprintf(NotFound, len(host)+18, host)))
 		return
 	}
-	fmt.Println("http -> httpHandler 4")
+
 	// If the client specified http auth and it doesn't match this request's auth
 	// then fail the request with 401 Not Authorized and request the client reissue the
 	// request with basic authdeny the request
@@ -104,11 +101,10 @@ func httpHandler(c conn.Conn, proto string) {
 		c.Write([]byte(NotAuthorized))
 		return
 	}
-	fmt.Println("http -> httpHandler 5")
+
 	// dead connections will now be handled by tunnel heartbeating and the client
 	c.SetDeadline(time.Time{})
 
 	// let the tunnel handle the connection now
-	fmt.Println("http -> httpHandler 6")
 	tunnel.HandlePublicConnection(c)
 }

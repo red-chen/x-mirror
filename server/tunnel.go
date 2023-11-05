@@ -243,7 +243,6 @@ func (t *Tunnel) listenTcp(listener *net.TCPListener) {
 }
 
 func (t *Tunnel) HandlePublicConnection(publicConn conn.Conn) {
-	fmt.Println("Tunnel -> HandlePublicConnection")
 	defer publicConn.Close()
 	defer func() {
 		if r := recover(); r != nil {
